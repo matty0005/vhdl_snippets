@@ -15,15 +15,14 @@
 --  datOut: Data to read to the RAM
 --           
 -- @author         Matthew Gilpin
--- @version        1
+-- @version        1.1
 -- @email          matt@matthewgilpin.com
 -- @contact        matthewgilpin.com
 --
 --------------------------------------------------------------------------------
 
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
 
 entity fifo is
     Generic (
@@ -43,90 +42,94 @@ entity fifo is
          );
 end fifo;
 
-architecture behavioural of fifo is 
+architecture Behavioral of fifo is
 
-shared variable writeCounter: integer := 0;
-shared variable readCounter: integer := 0;
+type ramType is array (d - 1 downto 0) of std_logic_vector(w - 1 downto 0);
+shared variable RAM : ramType;
 
 signal isFull : std_logic := '0';
 signal isEmpty : std_logic := '1';
 
-type ramType is array (d - 1 downto 0) of std_logic_vector(w - 1 downto 0);
-shared variable RAM_STORE : ramType;
+shared variable headCounter : integer := 0;
+shared variable tailCounter : integer := 0;
 
 
 begin
 
-HEAD_POINTER : process(clkWrite)
+HEAD_POINTER : process (clkWrite, rst)
 begin
-    if rising_edge(clkWrite) then
-        if rst = '1' then
-            writeCounter := 0;
-        else 
-            if write = '1' and isFull = '0' then
-                if (writeCounter + 1) = d then
-                    writeCounter := 0;
-                else 
-                    writeCounter := writeCounter + 1;
-                    RAM_STORE(writeCounter) := datIn;
-                end if;
+    if rst = '1' then 
+        headCounter := 0;
+    elsif clkWrite'event and clkWrite = '1' then
+        if write = '1' and isFull = '0' then
+            headCounter := headCounter + 1;
+            
+            if headCounter = d then
+                headCounter := 0;                
             end if;
-        end if;    
+        end if;        
     end if;
 end process;
-   
-   
-TAIL_POINTER : process(clkRead)
-begin
-    if rising_edge(clkRead) then
-        if rst = '1' then
-            readCounter := 0;
-        else 
-            if read = '1' and isEmpty = '0' then
-                if (readCounter + 1) = d then
-                    readCounter := 0;
-                else 
-                    readCounter := readCounter + 1;
-                    datOut <= RAM_STORE(readCounter);
-                end if;
-            end if;
-        end if;
-    end if; 
-end process;
 
+TAIL_POINTER : process (clkRead, rst)
+begin
+    if rst = '1' then 
+        tailCounter := 0;
+    elsif clkRead'event and clkRead = '1' then
+        if read = '1' and isEmpty = '0' then
+            tailCounter := tailCounter + 1;
+            
+            if tailCounter = d then
+                tailCounter := 0;                
+            end if;
+        end if;        
+    end if;
+end process;
 
 SET_LIMITS : process(clkRead, clkWrite)
 begin
-    if rising_edge(clkRead) or rising_edge(clkWrite) then
-        -- May need to account for lag -> +1
-        if writeCounter = (readCounter) then
+    if (clkRead'event and clkRead = '1') or (clkWrite'event and clkWrite = '1') then
+        if headCounter = tailCounter then
             isFull <= '0';
             isEmpty <= '1';
-        else
+        else 
             isFull <= '0';
             isEmpty <= '0';
         end if;
         
-        if writeCounter > readCounter then            
-            if (writeCounter - readCounter) = (d - 1) then 
+        if headCounter > tailCounter then            
+            if (headCounter - tailCounter) = (d - 1) then 
                 isFull <= '1';
             else 
                 isFull <= '0';
             end if;
             
-        elsif writeCounter < readCounter then            
-            if (readCounter - writeCounter) = 1 then 
+        elsif headCounter < tailCounter then            
+            if (tailCounter - headCounter) = 1 then 
                 isFull <= '1';
             else 
                 isFull <= '0';
             end if;
         end if;
-        
+    end if;
+end process;
+
+
+WRITE_RAM : process(clkWrite)
+begin
+    if clkWrite'event and clkWrite = '1' then
+        RAM(headCounter) := datIn;
+    end if;
+end process;
+
+READ_RAM : process(clkRead)
+begin
+    if clkRead'event and clkRead = '1' then
+        datOut <= RAM(tailCounter);
     end if;
 end process;
 
 full <= isFull;
 empty <= isEmpty;
 
-
-end behavioural;
+end Behavioral;
