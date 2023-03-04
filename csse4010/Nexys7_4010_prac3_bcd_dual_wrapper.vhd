@@ -11,15 +11,6 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
--- Uncomment the following library declaration if using
--- arithmetic functions with Signed or Unsigned values
---use IEEE.NUMERIC_STD.ALL;
-
--- Uncomment the following library declaration if instantiating
--- any Xilinx leaf cells in this code.
---library UNISIM;
---use UNISIM.VComponents.all;
-
 entity nexys7_bcd_dual_wrapper is
     Port ( 
         SW : in STD_LOGIC_VECTOR(15 downto 0);
@@ -60,10 +51,7 @@ signal SSD4_display : std_logic_vector(7 downto 0) := "00000000";
 
 signal bcd_sum : std_logic_vector(11 downto 0) := "000000000000";
 
-
 begin
-
-
 adder : bcdadder_dual 
     port map (
         a => SW(15 downto 8),
@@ -72,7 +60,6 @@ adder : bcdadder_dual
         c_out => open,
         sum => bcd_sum
     );
-    
     
 ssd3 : sevenSegDisp 
     port map (
@@ -95,7 +82,6 @@ ssd4 : sevenSegDisp
         value => "0000",
         display => SSD1_display(6 downto 0)
     );
-    
 
 ssd_control: process(CLK100MHZ, currentSsd) is 
 begin
